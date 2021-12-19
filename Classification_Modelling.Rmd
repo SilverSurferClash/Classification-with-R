@@ -5,7 +5,158 @@ library(tidyverse)
 library(tidymodels)
 ```
 
+
+# Read in a CSV file
 ```{r}
-df <- read_csv("data/train.csv")
+df_raw <- read_csv("data/train.csv")
 ```
+
+# Covert to a dataframe or tibble
+# Facorize target variable
+
+```{r}
+df <- as_tibble(df_raw) 
+df$Cover_Type<- as_factor(df$Cover_Type)
+df <- df %>% rename(target = Cover_Type ) %>% select(target, everything())
+```
+
+
+
+
+# Rename Target variable - Requires tibble/df as input
+
+## Figure out why this function does not work - Initial idea: Tidyverse function "pull out a different data structure that using $ notation (e.g. df$)
+
+
+```{r}
+rename_target <- function(data, target_variable) {
+  data %>% select(target_variable, everything())
+  
+}
+
+
+```
+
+
+
+
+Create stratified k-fold cross validation 
+```{r}
+set.seed(23)
+
+split_df <- df %>% initial_split()
+
+train_df <- training(split_df)
+
+test_df <- testing(split_df)
+
+set.seed(21)
+
+
+#Notes
+#This data does not require stratiefied resampling - otherwise add the parameter for strata (default strata = NULL)
+# The split into k-folds is only done for the training data set and not for the testing data set
+
+fold_df <- vfold_cv(train_df, v= 5)
+
+
+```
+
+
+
+Pre-processing steps
+
+#Impute
+#Handle factor levels
+#Individual transformations for skewness and other issues
+#Discretize (if needed and if you have no other choice)
+#Create dummy variables
+#Create interactions
+#Normalization steps (center, scale, range, etc)
+#Multivariate transformation (e.g. PCA, spatial sign, etc)
+
+
+```{r}
+# no missing 
+# The recipe function is applied to the complete training fold and not the k-fold data structure - Check other examples
+
+df_recipe <- recipe(target ~ ., data = train_df) %>% step_nzv(all_predictors()) %>% step_normalize(all_predictors()) %>% step_corr(all_predictors())
+
+
+```
+
+
+
+
+# Define evaulation metric
+
+```{r}
+eval_metric <- metric_set(accuracy)
+
+
+```
+
+
+# Define ctrl grids
+
+```{r}
+ctrl_grid <- control_grid()
+ctrl_res <- control_resamples()
+```
+
+# Define models
+
+```{r}
+lin_reg_spec <-
+  linear_reg() %>%
+  set_engine("lm")
+
+tune_rf <- rand_forest(
+  mtry = tune(),
+  trees = 1000,
+  min_n = tune()
+) %>%
+  set_mode("classification") %>%
+  set_engine("ranger")
+
+```
+
+
+
+#Define workflow
+
+```{r}
+tune_wf <- workflow() %>% add_recipe(df_recipe) %>% add_model(tune_rf)
+
+```
+
+# Fit the model/workflow
+
+```{r}
+doParallel::registerDoParallel()
+
+set.seed(135)
+
+tune_res <- tune_grid(
+  tune_wf,
+  resamples = fold_df,
+  metrics = eval_metric,
+  grid = 20
+  
+  
+)
+
+tune_res
+
+```
+
+
+
+
+
+
+
+
+
+
 

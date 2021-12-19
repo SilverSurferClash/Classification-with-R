@@ -18,7 +18,10 @@ library(tidymodels)
 
 
 ```{r}
-df <- read_csv("data/train.csv")
+df_raw <- read_csv("data/train.csv")
+
+df<- as_tibble(df_raw)
+
 ```
 
 ```{r echo=TRUE}
@@ -87,6 +90,15 @@ plt_target(df, df$Cover_Type)
 
 library(GGally)
 ggpairs(df[1:500, 6:10])
+
+```
+
+# Identify the categorical/nominal variables
+
+```{r}
+
+df_test <- df %>% summarise(across(where(is.factor), ~.x))
+
 
 ```
 
