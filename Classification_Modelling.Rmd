@@ -1,0 +1,11 @@
+
+
+```{r}
+library(tidyverse)
+library(tidymodels)
+```
+
+```{r}
+df <- read_csv("data/train.csv")
+```
+
