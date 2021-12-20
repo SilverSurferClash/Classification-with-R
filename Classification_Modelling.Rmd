@@ -190,6 +190,12 @@ boost_mod <- boost_tree(
   set_mode("classification") # Otherwise regression
 
 
+# Support Vector model for classification
+
+svm_mod <-
+  svm_rbf(mode = "classification", cost = tune(), rbf_sigma = tune()) %>%
+  set_engine("kernlab")
+
 ```
 
 

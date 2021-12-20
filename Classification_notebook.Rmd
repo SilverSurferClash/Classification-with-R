@@ -34,6 +34,24 @@ remove_columns <- function(data, col_nam){
 
 ```
 
+#Plot the distribution of all variables
+
+
+```{r}
+
+
+df %>% 
+    select(1:6) %>% 
+    pivot_longer(everything()) %>% 
+    ggplot() +
+        aes(x = value) +
+        geom_density() +
+        facet_wrap(~name, scales = "free")
+```
+
+
+
+
 ```{r}
 # Identify "missingness" by column
 # Inputs arguments: df = dataframe
@@ -80,6 +98,27 @@ plt_target <- function(data,target_variable ){
 
 plt_target(df, df$Cover_Type)
 
+```
+
+
+
+#Plot a correlation plot of selected variables
+# Use the select function to select the relevant columns
+
+```{r}
+df %>% 
+    select(1:15) %>% 
+    cor() %>% 
+    as_tibble(rownames = "x") %>% 
+    pivot_longer(-x) %>% 
+    ggplot() +
+        aes(x = x, y = name, fill = value) +
+        geom_raster() +
+        scale_fill_gradient2(low = "purple", mid = "white",
+                             high = "orangered") +
+        labs(x = NULL, y = NULL) +
+        theme(axis.text.x = element_text(
+            angle = 90, hjust = 1, vjust = 0.5))
 ```
 
 
