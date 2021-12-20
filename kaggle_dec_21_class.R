@@ -39,13 +39,7 @@ rf_mod <- rand_forest(
   set_mode("classification") %>%
   set_engine("ranger")
 
-# 2) Build the recipe
 
-recipe_rf <- recipe(target ~ ., data = train_df) %>% step_nzv(all_predictors()) %>% step_normalize(all_predictors()) %>% step_corr(all_predictors())
-
-# 3) Build the workflow
-
-wf_rf <- workflow() %>% add_recipe(recipe_rf) %>% add_model(rf_mod)
 
 ## Build the resamples object
 
@@ -61,19 +55,21 @@ set.seed(21)
 
 fold_df <- vfold_cv(train_df, v= 5)
 
+# 2) Build the recipe
+
+recipe_rf <- recipe(target ~ ., data = train_df) %>% step_nzv(all_predictors()) %>% step_normalize(all_predictors()) %>% step_corr(all_predictors())
+
+# 3) Build the workflow
+
+wf_rf <- workflow() %>% add_recipe(recipe_rf) %>% add_model(rf_mod)
+
 # Define the grid object
 
-rf_params <- 
-  dials::parameters(
-    mtry = tune(),
-    min_n = tune()
-  )
+rf_params <- parameters(finalize(mtry(), select(df, -target)) , min_n())
 
-rf_grid <- 
-  dials::grid_max_entropy(
-    rf_params, 
-    size = 20 # check the best value here (xgboost article used 60)
-  )
+
+
+rf_grid <- grid_max_entropy(rf_params, size = 10)
 
 # Define the control grid
 
@@ -87,19 +83,9 @@ tune_results <- tune_grid(
   resamples = fold_df,
   grid = rf_grid,
   control = ctrl_features
-  
-)
+  )
 
 
-#tune_grid(
-# object,      # workflow object
-#resamples,   # rsamples object
-#...,
-#param_info = NULL,  # dials:parameters object
-# grid = 10, # dataframe of tuning values
-# metrics = NULL,  # yardstick:metric_set()
-# control = control_grid() # object for modifying the tuning process
-#)
 
 
 
