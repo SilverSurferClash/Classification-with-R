@@ -38,6 +38,48 @@ rename_target <- function(data, target_variable) {
 ```
 
 
+# S3 method for workflow
+tune_grid(
+  object,      # workflow object
+  resamples,   # rsamples object
+  ...,
+  param_info = NULL,  # dials:parameters object
+  grid = 10, # dataframe of tuning values
+  metrics = NULL,  # yardstick:metric_set()
+  control = control_grid() # object for modifying the tuning process
+)
+
+# Control_grid object
+
+control_grid(
+  verbose = FALSE,
+  allow_par = TRUE,
+  extract = NULL,
+  save_pred = FALSE,
+  pkgs = NULL,
+  save_workflow = FALSE,
+  event_level = "first",
+  parallel_over = NULL
+)
+
+
+# S3 method for workflow
+tune_bayes(
+  object,
+  resamples,
+  ...,
+  iter = 10,
+  param_info = NULL,
+  metrics = NULL,
+  objective = exp_improve(),
+  initial = 5,
+  control = control_bayes()
+)
+
+
+
+
+
 
 
 Create stratified k-fold cross validation 
@@ -107,17 +149,46 @@ ctrl_res <- control_resamples()
 # Define models
 
 ```{r}
-lin_reg_spec <-
-  linear_reg() %>%
+
+# Linear regression model
+
+lin_reg_mode <-
+  linear_reg(
+   penalty=tune(),
+   mixture=tune()
+  ) %>%
   set_engine("lm")
 
-tune_rf <- rand_forest(
+#Regularized linear regression
+
+
+# Random forest model
+rf_mod <- rand_forest(
   mtry = tune(),
   trees = 1000,
   min_n = tune()
 ) %>%
   set_mode("classification") %>%
   set_engine("ranger")
+
+# Binary regression model
+
+Log_class <- logistic_reg(
+  penalty=tune(),
+  mixture=tune(),
+) %>% set_engine("glmnet")
+
+
+# XGboost model/Boosted trees
+
+boost_mod <- boost_tree(
+  mtry= tune(),
+  tree=tune(),
+  learn_rate = tune(),
+  tree_depth = tune()
+  ) %>% set_engine("xgboost") %>%
+  set_mode("classification") # Otherwise regression
+
 
 ```
 
