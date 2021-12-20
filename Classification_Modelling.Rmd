@@ -86,6 +86,8 @@ Create stratified k-fold cross validation
 ```{r}
 set.seed(23)
 
+df <- df %>% sample_frac() # Shuffle the rows
+
 split_df <- df %>% initial_split()
 
 train_df <- training(split_df)
@@ -122,8 +124,14 @@ Pre-processing steps
 # no missing 
 # The recipe function is applied to the complete training fold and not the k-fold data structure - Check other examples
 
-df_recipe <- recipe(target ~ ., data = train_df) %>% step_nzv(all_predictors()) %>% step_normalize(all_predictors()) %>% step_corr(all_predictors())
 
+# Starting recipe for a Random Forest Model
+recipe_rf <- recipe(target ~ ., data = train_df) %>% step_nzv(all_predictors()) %>% step_normalize(all_predictors()) %>% step_corr(all_predictors())
+
+prep_recipe <- prep(recipe_rf, training = train_df,
+                      strings_as_factors = FALSE)
+# Print out prepped recipe to control the pre-processing steps
+prep_recipe
 
 ```
 
@@ -142,8 +150,24 @@ eval_metric <- metric_set(accuracy)
 # Define ctrl grids
 
 ```{r}
-ctrl_grid <- control_grid()
-ctrl_res <- control_resamples()
+# grid specification based on the example of rf with mtry and min_n as tune parameters
+rf_params <- 
+  dials::parameters(
+   mtry = tune(),
+  min_n = tune()
+  )
+
+rf_grid <- 
+  dials::grid_max_entropy(
+    rf_params, 
+    size = 20 # check the best value here (xgboost article used 60)
+  )
+head(rd_grid)
+
+
+# Check the use of these functions later
+#ctrl_grid <- control_grid()
+#ctrl_res <- control_resamples()
 ```
 
 # Define models
@@ -152,7 +176,7 @@ ctrl_res <- control_resamples()
 
 # Linear regression model
 
-lin_reg_mode <-
+lin_reg_mod <-
   linear_reg(
    penalty=tune(),
    mixture=tune()
