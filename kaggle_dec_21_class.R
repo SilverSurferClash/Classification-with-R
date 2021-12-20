@@ -76,6 +76,15 @@ rf_grid <- grid_max_entropy(rf_params, size = 10)
 ctrl_features <- control_grid(verbose = TRUE)
 
 
+# Initialize the parallel computing
+
+library("doFuture")
+all_cores <- parallel::detectCores(logical = FALSE) - 1
+
+registerDoFuture()
+cl <- makeCluster(all_cores)
+plan(future::cluster, workers = cl)
+
 # Define the tune_grid object
 
 tune_results <- tune_grid(
