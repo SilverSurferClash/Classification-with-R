@@ -37,13 +37,15 @@ rf_mod <- rand_forest(
   min_n = tune()
 ) %>%
   set_mode("classification") %>%
-  set_engine("ranger")
+  set_engine("randomForest")
 
 
 
 ## Build the resamples object
 
 set.seed(23)
+
+df <- df %>% sample_frac(0.1)
 
 split_df <- df %>% initial_split()
 
@@ -69,33 +71,59 @@ rf_params <- parameters(finalize(mtry(), select(df, -target)) , min_n())
 
 
 
-rf_grid <- grid_max_entropy(rf_params, size = 10)
+rf_grid <- grid_max_entropy(rf_params, size = 20)
 
 # Define the control grid
 
-ctrl_features <- control_grid(verbose = TRUE)
+ctrl_features <- control_grid(verbose = TRUE, save_pred = TRUE)
 
 
 # Initialize the parallel computing
+library(doParallel)
 
-library("doFuture")
-all_cores <- parallel::detectCores(logical = FALSE) - 1
+all_cores <- parallel::detectCores(logical = FALSE)
 
-registerDoFuture()
-cl <- makeCluster(all_cores)
-plan(future::cluster, workers = cl)
+cl <- makePSOCKcluster(all_cores)
+registerDoParallel(cl)
+
+clusterEvalQ(cl, {library(tidymodels)})
+
 
 # Define the tune_grid object
+
+start_time <- Sys.time()
 
 tune_results <- tune_grid(
   object = wf_rf,
   resamples = fold_df,
   grid = rf_grid,
   control = ctrl_features
-  )
+)
+
+end_time <- Sys.time()
+
+print(end_time - start_time)
 
 
 
+
+best_params <- tune_results %>% select_best("accuracy")
+
+
+final_wf <- wf_rf %>% finalize_workflow(best_params)
+
+
+final_fit_rf <- final_wf %>% last_fit(split_df)
+
+
+final_fit_rf %>%
+  collect_metrics()
+
+
+final_fit_rf %>%
+  collect_predictions() %>% 
+  roc_curve(class, .pred_PS) %>% 
+  autoplot()
 
 
 
