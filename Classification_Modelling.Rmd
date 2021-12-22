@@ -151,18 +151,14 @@ eval_metric <- metric_set(accuracy)
 
 ```{r}
 # grid specification based on the example of rf with mtry and min_n as tune parameters
-rf_params <- 
-  dials::parameters(
-   mtry = tune(),
-  min_n = tune()
-  )
+rf_params <- parameters(finalize(mtry(), select(df, -target)) , min_n())
 
-rf_grid <- 
-  dials::grid_max_entropy(
-    rf_params, 
-    size = 20 # check the best value here (xgboost article used 60)
-  )
-head(rd_grid)
+
+
+rf_grid <- grid_max_entropy(rf_params, size = 20)
+
+
+head(rf_grid)
 
 
 # Check the use of these functions later
@@ -227,9 +223,17 @@ svm_mod <-
 #Define workflow
 
 ```{r}
-tune_wf <- workflow() %>% add_recipe(df_recipe) %>% add_model(tune_rf)
+tune_wf <- workflow() %>% add_recipe(recipe_rf) %>% add_model(rf_mod)
 
 ```
+
+#Define the control grid - keep predictions and print out progress
+```{r}
+ctrl_features <- control_grid(verbose = TRUE, save_pred = TRUE)
+
+```
+
+
 
 # Fit the model/workflow
 
@@ -238,21 +242,63 @@ doParallel::registerDoParallel()
 
 set.seed(135)
 
+
+start_time <- Sys.time()
+
+
 tune_res <- tune_grid(
   tune_wf,
   resamples = fold_df,
-  metrics = eval_metric,
-  grid = 20
+  grid = 20,
+  control = ctrl_features
   
   
 )
 
+end_time <- Sys.time()
+
+
 tune_res
+
+total_time <- end_time - start_time
+
 
 ```
 
 
+# Select the best combination of tuning-factors
+# You have to define the loss/optimization criteria to select the best parameter combination
+# Comment - Look up the process for using custom metrics
 
+```{r}
+best_params <- tune_res %>% select_best("accuarcy")
+```
+
+# Finalize the model
+# The function takes as an input the workflow object(model + recipe/pre-processed training data)
+```{r}
+final_wf <- tune_wf %>% finalize_workflow(best_params)
+
+
+```
+
+#Fit the final workflow to the whole data set - Dataframe which is assigned to the initial_split function
+# Comment - Understand better which data set should be used in the last fit call
+```{r}
+final_fit_rf <- final_wf %>% last_fit(split_df)
+```
+
+
+```{r}
+final_fit_rf %>%
+  collect_metrics()
+
+
+final_fit %>%
+  collect_predictions() %>% 
+  roc_curve(class, .pred_PS) %>% 
+  autoplot()
+```
 
 
 
